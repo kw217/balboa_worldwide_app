@@ -1,3 +1,9 @@
+# Balboa protocol
+
+This document contains the verified/agreed upon serial protocol. To see work in progress and help document more of the protocol, see the [wiki](https://github.com/ccutrer/balboa_worldwide_app/wiki).
+
+## General
+
 MAC addresses beginning with 00:15:27 belong to Balboa Instruments (useful for looking at DHCP leases to find your Spa's IP address without using discovery)
 
 For discovery, send a UDP broadcast to port 30303. The spa (and possibly other devices on your network!) will respond (unicast) with two lines (CRLF endings). The first line is the hostname (BWGSPA), and the second line is its MAC address. Currently I'm filtering responses by Balboa's MAC prefix.
