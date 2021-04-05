@@ -47,7 +47,7 @@ module BWA
           next
         end
         break if message.src == @src || message.src >= 0xFE
-        BWA.logger.debug "ignoring message for channel #{BWA.raw2str(message.src)}"
+        BWA.logger.debug "ignoring message for channel 0x#{"%02x" % message.src}"
       end
 
       if message.is_a?(Messages::Ready) && (msg = @queue&.shift)
@@ -59,6 +59,10 @@ module BWA
       @last_control_configuration = message.dup if message.is_a?(Messages::ControlConfiguration)
       @last_control_configuration2 = message.dup if message.is_a?(Messages::ControlConfiguration2)
       message
+    end
+
+    def ready?
+      !@src.nil?
     end
 
     def messages_pending?

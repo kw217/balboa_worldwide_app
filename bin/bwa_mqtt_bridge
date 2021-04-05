@@ -48,8 +48,8 @@ class MQTTBridge
             publish_circpump if message.circ_pump
             publish("$state", "ready")
           when BWA::Messages::Status
-            @bwa.request_control_info unless @bwa.last_control_configuration || @bwa.src.nil?
-            @bwa.request_control_info2 unless @bwa.last_control_configuration2 || @bwa.src.nil?
+            @bwa.request_control_info unless @bwa.last_control_configuration || !@bwa.ready?
+            @bwa.request_control_info2 unless @bwa.last_control_configuration2 || !@bwa.ready?
 
             # make sure time is in sync
             now = Time.now
@@ -61,7 +61,7 @@ class MQTTBridge
             # allow a skew of 1 minute, since the seconds will always be off
             if diff > 1
               BWA.logger.info "Spa time #{"%02d:%02d" % [message.hour, message.minute]}, actually #{"%02d:%02d" % [now.hour, now.min]}; correcting difference of #{diff} min"
-              @bwa.set_time(now.hour, now.min, message.twenty_four_hour_time) unless @bwa.src.nil?
+              @bwa.set_time(now.hour, now.min, message.twenty_four_hour_time) if @bwa.ready?
             end
             publish_attribute("spa/priming", message.priming)
             publish_attribute("spa/heatingmode", message.heating_mode)
@@ -284,6 +284,6 @@ end
 
 spa = BWA::Client.new(spa_ip)
 
-#KSW: spa.request_configuration
+spa.request_configuration if spa.ready?
 
 MQTTBridge.new(mqtt_uri, spa)
