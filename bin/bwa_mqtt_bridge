@@ -48,21 +48,24 @@ class MQTTBridge
             publish_circpump if message.circ_pump
             publish("$state", "ready")
           when BWA::Messages::Status
-            @bwa.request_control_info unless @bwa.last_control_configuration || !@bwa.ready?
-            @bwa.request_control_info2 unless @bwa.last_control_configuration2 || !@bwa.ready?
+            if @bwa.ready?
+              @bwa.request_control_info unless @bwa.last_control_configuration
+              @bwa.request_control_info2 unless @bwa.last_control_configuration2
 
-            # make sure time is in sync
-            now = Time.now
-            now_minutes = now.hour * 60 + now.min
-            spa_minutes = message.hour * 60 + message.minute
-            # check the difference in both directions
-            diff = [(spa_minutes - now_minutes) % 1440, 1440 - (spa_minutes - now_minutes) % 1440].min
+              # make sure time is in sync
+              now = Time.now
+              now_minutes = now.hour * 60 + now.min
+              spa_minutes = message.hour * 60 + message.minute
+              # check the difference in both directions
+              diff = [(spa_minutes - now_minutes) % 1440, 1440 - (spa_minutes - now_minutes) % 1440].min
 
-            # allow a skew of 1 minute, since the seconds will always be off
-            if diff > 1
-              BWA.logger.info "Spa time #{"%02d:%02d" % [message.hour, message.minute]}, actually #{"%02d:%02d" % [now.hour, now.min]}; correcting difference of #{diff} min"
-              @bwa.set_time(now.hour, now.min, message.twenty_four_hour_time) if @bwa.ready?
+              # allow a skew of 1 minute, since the seconds will always be off
+              if diff > 1
+                BWA.logger.info "Spa time #{"%02d:%02d" % [message.hour, message.minute]}, actually #{"%02d:%02d" % [now.hour, now.min]}; correcting difference of #{diff} min"
+                @bwa.set_time(now.hour, now.min, message.twenty_four_hour_time)
+              end
             end
+
             publish_attribute("spa/priming", message.priming)
             publish_attribute("spa/heatingmode", message.heating_mode)
             publish_attribute("spa/temperaturescale", message.temperature_scale)
@@ -102,6 +105,9 @@ class MQTTBridge
         end
       end
     end
+
+    #KSW: don't want to start processing messages until we are @bwa.ready?; not sure how to achieve that (cross-thread block).
+    #KSW: Also: issue that first request once we're ready, not before.
 
     # Process messages for our subscriptions as we receive them.
     @mqtt.get do |topic, value|
@@ -284,6 +290,6 @@ end
 
 spa = BWA::Client.new(spa_ip)
 
-spa.request_configuration if spa.ready?
+spa.request_configuration if spa.ready?  # KSW: which it won't be, so fix this
 
 MQTTBridge.new(mqtt_uri, spa)
