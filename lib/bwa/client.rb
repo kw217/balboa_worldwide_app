@@ -3,9 +3,11 @@ require 'bwa/message'
 
 module BWA
   class Client
-    attr_reader :last_status, :last_control_configuration, :last_control_configuration2, :last_filter_configuration
+    attr_reader :last_status, :last_control_configuration, :last_control_configuration2, :last_filter_configuration, :src
 
-    def initialize(uri)
+    ##
+    # Initialize client, optionally preassigning the channel (normally this is assigned by the spa main board).
+    def initialize(uri, src = nil)
       uri = URI.parse(uri)
       if uri.scheme == 'tcp'
         require 'socket'
@@ -19,10 +21,15 @@ module BWA
         @io = CCutrer::SerialPort.new(uri.path, baud: 115200)
         @queue = []
       end
-      @src = 0x0a
+
+      # Until we have a channel, we can only receive multicast messages
+      @src = src
+
       @buffer = ""
     end
 
+    ##
+    # Read a single message from the spa.
     def poll
       message = bytes_read = nil
       loop do
@@ -39,7 +46,8 @@ module BWA
           end
           next
         end
-        break
+        break if message.src == @src || message.src >= 0xFE
+        BWA.logger.debug "ignoring message for channel #{BWA.raw2str(message.src)}"
       end
 
       if message.is_a?(Messages::Ready) && (msg = @queue&.shift)
@@ -61,8 +69,11 @@ module BWA
       poll while messages_pending?
     end
 
-    def send_message(message)
-      message.src = @src
+    ##
+    # Send message - either from current channel, or an explicitly-specified channel.
+    def send_message(message, src = @src)
+      raise "Cannot send yet - need channel assignment" unless src
+      message.src = src
       BWA.logger.info "  to spa: #{message.inspect}" unless BWA.verbosity < 1 && message.is_a?(Messages::ControlConfigurationRequest)
       full_message = message.serialize
       if @queue
