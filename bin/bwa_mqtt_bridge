@@ -103,6 +103,7 @@ class MQTTBridge
       end
     end
 
+    # Process messages for our subscriptions as we receive them.
     @mqtt.get do |topic, value|
       BWA.logger.warn "from mqtt: #{value.inspect} at #{topic}"
       case topic[@base_topic.length + 1..-1]
@@ -154,6 +155,7 @@ class MQTTBridge
   end
 
   def subscribe(topic)
+    BWA.logger.info("Subscribed to #{@base_topic}/#{topic}")
     @mqtt.subscribe("#{@base_topic}/#{topic}")
   end
 
