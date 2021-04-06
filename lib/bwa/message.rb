@@ -40,8 +40,7 @@ module BWA
             "\xbf\xe1".force_encoding(Encoding::ASCII_8BIT),
           ] unless BWA.verbosity >= 1
           msgs += [
-            "\xbf\x00".force_encoding(Encoding::ASCII_8BIT),
-            "\xbf\xe1".force_encoding(Encoding::ASCII_8BIT),
+            Messages::NewClientClearToSend::MESSAGE_TYPE,
             Messages::Ready::MESSAGE_TYPE,
             "\xbf\x07".force_encoding(Encoding::ASCII_8BIT),
           ] unless BWA.verbosity >= 2
@@ -152,11 +151,14 @@ module BWA
   end
 end
 
+require 'bwa/messages/channel_assignment_request'
+require 'bwa/messages/channel_assignment_response'
 require 'bwa/messages/configuration'
 require 'bwa/messages/configuration_request'
 require 'bwa/messages/control_configuration'
 require 'bwa/messages/control_configuration_request'
 require 'bwa/messages/filter_cycles'
+require 'bwa/messages/new_client_clear_to_send'
 require 'bwa/messages/ready'
 require 'bwa/messages/set_temperature'
 require 'bwa/messages/set_temperature_scale'
