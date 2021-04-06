@@ -25,9 +25,8 @@ module BWA
 
       # Ignore (parse and throw away) messages of these types.
       IGNORED_MESSAGES = [
-        "\xbf\x00".force_encoding(Encoding::ASCII_8BIT),  # request for new clients
-        "\xbf\xe1".force_encoding(Encoding::ASCII_8BIT),
         "\xbf\x07".force_encoding(Encoding::ASCII_8BIT),  # nothing to send
+        "\xbf\xe1".force_encoding(Encoding::ASCII_8BIT),  # error?
       ]
 
       # Don't log messages of these types, even in DEBUG mode.
@@ -37,12 +36,12 @@ module BWA
           msgs = []
           msgs += [
             Messages::Status::MESSAGE_TYPE,
-            "\xbf\xe1".force_encoding(Encoding::ASCII_8BIT),
+            "\xbf\xe1".force_encoding(Encoding::ASCII_8BIT),  # error?
           ] unless BWA.verbosity >= 1
           msgs += [
             Messages::NewClientClearToSend::MESSAGE_TYPE,
             Messages::Ready::MESSAGE_TYPE,
-            "\xbf\x07".force_encoding(Encoding::ASCII_8BIT),
+            "\xbf\x07".force_encoding(Encoding::ASCII_8BIT),  # nothing to send
           ] unless BWA.verbosity >= 2
           msgs
         end
