@@ -22,8 +22,12 @@ module BWA
         @queue = []
       end
 
-      # Until we have a channel, we can only receive multicast messages
       @src = src
+      @turn = nil
+      @nonce = nil
+      if !@src
+        self.start_registration
+      end
 
       @buffer = ""
     end
@@ -46,14 +50,34 @@ module BWA
           end
           next
         end
-        break if message.src == @src || message.src >= 0xFE
-        BWA.logger.debug "ignoring message for channel 0x#{"%02x" % message.src}"
+        if message.src != @src && message.src != 0xFE
+          BWA.logger.debug "ignoring message for channel #{"0x%02x" % message.src}"
+          next
+        end
+        # Channel assignment protocol messages are processed here and hidden from the caller.
+        if message.is_a?(Messages::NewClientClearToSend)
+          if @turn == 0
+            self.register
+          elsif @turn
+            BWA.logger.debug "Not yet our turn to register: #{@turn} turns to go"
+            @turn -= 1
+          end
+          next
+        elsif message.is_a?(Messages::ChannelAssignmentResponse)
+          if message.nonce == @nonce
+            BWA.logger.info "Assigned channel #{"%02x" % message.channel}"
+            @src = message.channel
+            @nonce = nil
+          end
+          next
+        end
       end
 
       if message.is_a?(Messages::Ready) && (msg = @queue&.shift)
         BWA.logger.debug "wrote: #{BWA.raw2str(msg)}" unless BWA.verbosity < 1 && msg[3..4] == Messages::ControlConfigurationRequest::MESSAGE_TYPE
         @io.write(msg)
       end
+
       @last_status = message.dup if message.is_a?(Messages::Status)
       @last_filter_configuration = message.dup if message.is_a?(Messages::FilterCycles)
       @last_control_configuration = message.dup if message.is_a?(Messages::ControlConfiguration)
@@ -62,7 +86,7 @@ module BWA
     end
 
     def ready?
-      !@src.nil?
+      !!@src
     end
 
     def messages_pending?
@@ -71,6 +95,23 @@ module BWA
 
     def drain_message_queue
       poll while messages_pending?
+    end
+
+    ##
+    # Start registration process.
+    def start_registration
+      # Wait this many slots before issuing our request; this avoids multiple devices
+      # trying to register at once.
+      @turn = Random::DEFAULT.rand(20)
+      BWA.logger.debug "Registration started; #{@turn} turns to wait"
+    end
+
+    def register
+      BWA.logger.debug "Requesting channel"
+      # Two random bytes, to correlate the response with our request.
+      @nonce = Random::DEFAULT.rand(0x10000)
+      @turn = nil
+      send_message(Messages::ChannelAssignmentRequest(@nonce), src = 0xfe)
     end
 
     ##
