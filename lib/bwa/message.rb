@@ -150,6 +150,7 @@ module BWA
   end
 end
 
+require 'bwa/messages/channel_assignment_acknowledge'
 require 'bwa/messages/channel_assignment_request'
 require 'bwa/messages/channel_assignment_response'
 require 'bwa/messages/configuration'

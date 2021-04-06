@@ -68,12 +68,13 @@ module BWA
             BWA.logger.info "Assigned channel #{"%02x" % message.channel}"
             @src = message.channel
             @nonce = nil
+            send_message(Messages::ChannelAssignmentAcknowledge.new, immediate = true)
           end
           next
         end
       end
 
-      if message.is_a?(Messages::Ready) && (msg = @queue&.shift)
+      if message.is_a?(Messages::Ready) && (msg = @queue&.shift)  # TODO: NothingToSend
         BWA.logger.debug "wrote: #{BWA.raw2str(msg)}" unless BWA.verbosity < 1 && msg[3..4] == Messages::ControlConfigurationRequest::MESSAGE_TYPE
         @io.write(msg)
       end
@@ -111,8 +112,8 @@ module BWA
     def register
       BWA.logger.debug "Requesting channel"
       # Two random bytes, to correlate the response with our request.
-      @nonce = Random::DEFAULT.rand(0x10000)
-      @turn = nil
+      @nonce = 0x73f1 # KSW: perhaps not random? Random::DEFAULT.rand(0x10000)
+      @turn = nil  # KSW: this only tries once, which is a bit risky
       send_message(Messages::ChannelAssignmentRequest.new(@nonce), src = 0xfe, immediate = true)
     end
 

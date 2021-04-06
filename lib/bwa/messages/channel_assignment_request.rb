@@ -22,7 +22,7 @@ module BWA
       end
 
       def inspect
-        "#<BWA::Messages::ChannelAssignmentRequest #{"%02x" % nonce} (#{"%02x" % type})>"
+        "#<BWA::Messages::ChannelAssignmentRequest #{"%04x" % nonce} (#{"%02x" % type})>"
       end
     end
   end
