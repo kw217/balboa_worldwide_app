@@ -50,7 +50,7 @@ module BWA
           end
           next
         end
-        if message.src != @src && message.src != 0xFE
+        if message.src != @src && message.src < 0xFE
           BWA.logger.debug "ignoring message for channel #{"0x%02x" % message.src}"
           next
         end
@@ -100,9 +100,11 @@ module BWA
     ##
     # Start registration process.
     def start_registration
-      # Wait this many slots before issuing our request; this avoids multiple devices
-      # trying to register at once.
-      @turn = Random::DEFAULT.rand(20)
+      # Wait a random number of slots before issuing our request; this avoids multiple devices
+      # trying to register at once. At startup there are 10 slots per second, but once the
+      # spa is up and running it drops to one slot per second - so it may take a few seconds
+      # until it's our turn.
+      @turn = Random::DEFAULT.rand(10)
       BWA.logger.debug "Registration started; #{@turn} turns to wait"
     end
 
@@ -111,17 +113,17 @@ module BWA
       # Two random bytes, to correlate the response with our request.
       @nonce = Random::DEFAULT.rand(0x10000)
       @turn = nil
-      send_message(Messages::ChannelAssignmentRequest(@nonce), src = 0xfe)
+      send_message(Messages::ChannelAssignmentRequest.new(@nonce), src = 0xfe, immediate = true)
     end
 
     ##
     # Send message - either from current channel, or an explicitly-specified channel.
-    def send_message(message, src = @src)
+    def send_message(message, src = @src, immediate = false)
       raise "Cannot send yet - need channel assignment" unless src
       message.src = src
       BWA.logger.info "  to spa: #{message.inspect}" unless BWA.verbosity < 1 && message.is_a?(Messages::ControlConfigurationRequest)
       full_message = message.serialize
-      if @queue
+      if @queue && !immediate
         @queue.push(full_message)
       else
         BWA.logger.debug "wrote: #{BWA.raw2str(full_message)}" unless BWA.verbosity < 1 && message.is_a?(Messages::ControlConfigurationRequest)
