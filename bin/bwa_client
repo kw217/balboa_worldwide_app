@@ -32,7 +32,7 @@ else
   spa_ip = ARGV[0]
 end
 
-spa = BWA::Client.new(spa_ip)
+spa = BWA::Client.new(spa_ip, 0x0a)
 
 spa.request_configuration
 spa.request_control_info
