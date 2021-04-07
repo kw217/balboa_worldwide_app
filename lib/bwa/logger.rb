@@ -27,7 +27,7 @@ module BWA
         STDOUT.sync = true
         log.level = ENV.fetch("LOG_LEVEL","WARN")
         log.formatter = proc do |severity, datetime, progname, msg|
-          "#{severity[0..0]}, #{msg2logstr(msg)}\n"
+          "#{datetime.strftime("%S.%L:")} #{severity[0..0]}, #{msg2logstr(msg)}\n"
         end
       end
     end
