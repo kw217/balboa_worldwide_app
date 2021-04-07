@@ -41,7 +41,7 @@ module BWA
           msgs += [
             Messages::NewClientClearToSend::MESSAGE_TYPE,
             Messages::Ready::MESSAGE_TYPE,
-            "\xbf\x07".force_encoding(Encoding::ASCII_8BIT),  # nothing to send
+            Messages::NothingToSend::MESSAGE_TYPE,
           ] unless BWA.verbosity >= 2
           msgs
         end
@@ -159,6 +159,7 @@ require 'bwa/messages/control_configuration'
 require 'bwa/messages/control_configuration_request'
 require 'bwa/messages/filter_cycles'
 require 'bwa/messages/new_client_clear_to_send'
+require 'bwa/messages/nothing_to_send'
 require 'bwa/messages/ready'
 require 'bwa/messages/set_temperature'
 require 'bwa/messages/set_temperature_scale'
