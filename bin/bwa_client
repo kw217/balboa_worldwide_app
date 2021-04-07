@@ -7,7 +7,6 @@ def watch(spa)
   loop do
     begin
       message = spa.poll
-      next if message.is_a?(BWA::Messages::Ready)
       puts message.raw_data.unpack("H*").first.scan(/[0-9a-f]{2}/).join(' ')
       puts message.inspect
       if block_given?
@@ -32,7 +31,7 @@ else
   spa_ip = ARGV[0]
 end
 
-spa = BWA::Client.new(spa_ip, 0x0a)
+spa = BWA::Client.new(spa_ip, 0x0a, true)
 
 spa.request_configuration
 spa.request_control_info

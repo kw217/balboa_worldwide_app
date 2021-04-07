@@ -6,8 +6,11 @@ module BWA
     attr_reader :last_status, :last_control_configuration, :last_control_configuration2, :last_filter_configuration, :src
 
     ##
-    # Initialize client, optionally preassigning the channel (normally this is assigned by the spa main board).
-    def initialize(uri, src = nil)
+    # Initialize client.
+    #
+    # Optionally specify src to preassign the channel (normally this is assigned by the spa main board).
+    # Optionally specify loud to respond to all Ready messages, not just our own (old behaviour).
+    def initialize(uri, src = nil, loud = false)
       uri = URI.parse(uri)
       if uri.scheme == 'tcp'
         require 'socket'
@@ -23,6 +26,7 @@ module BWA
       end
 
       @src = src
+      @loud = loud
       @turn = nil
       @nonce = nil
       if !@src
@@ -50,12 +54,20 @@ module BWA
           end
           next
         end
-        if message.src != @src && message.src < 0xFE
+        if !(@loud || message.src == @src || message.src >= 0xFE)
           BWA.logger.debug "ignoring message for channel #{"0x%02x" % message.src}"
           next
         end
-        # Channel assignment protocol messages are processed here and hidden from the caller.
-        if message.is_a?(Messages::NewClientClearToSend)
+        # Various protocol messages are processed here and hidden from the caller.
+        if message.is_a?(Messages::Ready)
+          msg = @queue&.shift
+          msg ||= self.nothing_to_send unless @loud
+          if msg
+            BWA.logger.debug "wrote: #{BWA.raw2str(msg)}" unless BWA.verbosity < 1 && [Messages::ControlConfigurationRequest::MESSAGE_TYPE, Messages::NothingToSend::MESSAGE_TYPE].include?(msg[3..4])
+            @io.write(msg)
+          end
+          next
+        elsif message.is_a?(Messages::NewClientClearToSend)
           if @turn == 0
             self.register
           elsif @turn
@@ -72,11 +84,8 @@ module BWA
           end
           next
         end
-      end
-
-      if message.is_a?(Messages::Ready) && (msg = @queue&.shift)  # TODO: NothingToSend
-        BWA.logger.debug "wrote: #{BWA.raw2str(msg)}" unless BWA.verbosity < 1 && msg[3..4] == Messages::ControlConfigurationRequest::MESSAGE_TYPE
-        @io.write(msg)
+        # This message is for us.
+        break
       end
 
       @last_status = message.dup if message.is_a?(Messages::Status)
@@ -96,6 +105,16 @@ module BWA
 
     def drain_message_queue
       poll while messages_pending?
+    end
+
+    def nothing_to_send
+      if @nothing_to_send && @nothing_to_send_src == @src
+        @nothing_to_send
+      else
+        message = Messages::NothingToSend.new
+        message.src = @src
+        @nothing_to_send = message.serialize
+      end
     end
 
     ##

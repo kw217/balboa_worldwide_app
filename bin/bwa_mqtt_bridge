@@ -28,7 +28,6 @@ class MQTTBridge
       loop do
         begin
           message = @bwa.poll
-          next if message.is_a?(BWA::Messages::Ready)
 
           case message
           when BWA::Messages::ControlConfiguration
@@ -288,6 +287,7 @@ else
   spa_ip = ARGV[0]
 end
 
+#KSW:  spa = BWA::Client.new(spa_ip, src = 0x10, loud = true)
 spa = BWA::Client.new(spa_ip)
 
 spa.request_configuration if spa.ready?  # KSW: which it won't be, so fix this
