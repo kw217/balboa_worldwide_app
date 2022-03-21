@@ -6,7 +6,7 @@ module BWA
 
       attr_accessor :channel, :nonce
 
-      def initialize(channel, nonce)
+      def initialize(channel = nil, nonce = nil)
         super()
         self.channel = channel
         self.nonce = nonce

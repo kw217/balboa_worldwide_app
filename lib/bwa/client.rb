@@ -80,7 +80,8 @@ module BWA
             BWA.logger.info "Assigned channel #{"%02x" % message.channel}"
             @src = message.channel
             @nonce = nil
-            send_message(Messages::ChannelAssignmentAcknowledge.new, immediate = true)
+            @turn = nil
+            send_message(Messages::ChannelAssignmentAcknowledge.new, @src, true)
           end
           next
         end
@@ -131,9 +132,13 @@ module BWA
     def register
       BWA.logger.debug "Requesting channel"
       # Two random bytes, to correlate the response with our request.
-      @nonce = 0x73f1 # KSW: perhaps not random? Random::DEFAULT.rand(0x10000)
-      @turn = nil  # KSW: this only tries once, which is a bit risky
-      send_message(Messages::ChannelAssignmentRequest.new(@nonce), src = 0xfe, immediate = true)
+      # @nonce = 0x73f1 # KSW: perhaps not random? Random::DEFAULT.rand(0x10000)
+      @nonce = Random::DEFAULT.rand(0x10000)
+      # @turn = nil  # KSW: this only tries once, which is a bit risky
+      @turn = Random::DEFAULT.rand(10)  # KSW: try again
+      send_message(Messages::ChannelAssignmentRequest.new(@nonce, type = 2), src = 0xfe, immediate = true)
+      send_message(Messages::ChannelAssignmentRequest.new(@nonce, type = 2), src = 0xfe, immediate = true)
+      send_message(Messages::ChannelAssignmentRequest.new(@nonce, type = 2), src = 0xfe, immediate = true)
     end
 
     ##
