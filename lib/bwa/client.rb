@@ -81,7 +81,7 @@ module BWA
             @src = message.channel
             @nonce = nil
             @turn = nil
-            send_message(Messages::ChannelAssignmentAcknowledge.new, @src, true)
+            send_message(Messages::ChannelAssignmentAcknowledge.new, @src, immediate = true)
           end
           next
         end
